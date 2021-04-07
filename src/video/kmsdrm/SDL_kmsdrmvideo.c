@@ -47,6 +47,11 @@
 #include <errno.h>
 #include <poll.h>
 
+/* RPI eglext.h doesn't define EGL_PLATFORM_GBM_MESA */
+#ifndef EGL_PLATFORM_GBM_MESA
+#define EGL_PLATFORM_GBM_MESA 0x31D7
+#endif
+
 /* for older KMSDRM headers... */
 #ifndef DRM_FORMAT_MOD_VENDOR_NONE
 #define DRM_FORMAT_MOD_VENDOR_NONE 0
