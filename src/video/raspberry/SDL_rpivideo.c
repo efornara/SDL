@@ -262,6 +262,8 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
     DISPMANX_UPDATE_HANDLE_T dispman_update;
     uint32_t layer = SDL_RPI_VIDEOLAYER;
     const char *env;
+    float display_aspect;
+    float window_aspect;
 
     /* Disable alpha, otherwise the app looks composed with whatever dispman is showing (X11, console,etc) */
     dispman_alpha.flags = DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS; 
@@ -276,9 +278,15 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
     display = SDL_GetDisplayForWindow(window);
     displaydata = (SDL_DisplayData *) display->driverdata;
 
-    /* Windows have one size for now */
-    window->w = display->desktop_mode.w;
-    window->h = display->desktop_mode.h;
+    /* Basic scaler support - TODO: mouse, env options, background layer */
+    if (!window->w) {
+        window->w = display->desktop_mode.w;
+    }
+    if (!window->h) {
+        window->h = display->desktop_mode.h;
+    }
+    display_aspect = (float)display->desktop_mode.w / display->desktop_mode.h;
+    window_aspect = (float)window->w / window->h;
 
     /* OpenGL ES is the law here, buddy */
     window->flags |= SDL_WINDOW_OPENGL;
@@ -286,8 +294,13 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
     /* Create a dispman element and associate a window to it */
     dst_rect.x = 0;
     dst_rect.y = 0;
-    dst_rect.width = window->w;
-    dst_rect.height = window->h;
+    if (window_aspect >= display_aspect) {
+        dst_rect.width = display->desktop_mode.w;
+        dst_rect.height = display->desktop_mode.w / window_aspect;
+    } else {
+        dst_rect.width = display->desktop_mode.h * window_aspect;
+        dst_rect.height = display->desktop_mode.h;
+    }
 
     src_rect.x = 0;
     src_rect.y = 0;
