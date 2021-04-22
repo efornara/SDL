@@ -55,18 +55,20 @@ RPI_Destroy(SDL_VideoDevice * device)
 {
     SDL_free(device->driverdata);
     SDL_free(device);
+
+    SDL_RPI_UnloadSymbols();
 }
 
 static int 
 RPI_GetRefreshRate()
 {
     TV_DISPLAY_STATE_T tvstate;
-    if (vc_tv_get_display_state( &tvstate ) == 0) {
+    if (RPI_vc_tv_get_display_state( &tvstate ) == 0) {
         //The width/height parameters are in the same position in the union
         //for HDMI and SDTV
         HDMI_PROPERTY_PARAM_T property;
         property.property = HDMI_PROPERTY_PIXEL_CLOCK_TYPE;
-        vc_tv_hdmi_get_property(&property);
+        RPI_vc_tv_hdmi_get_property(&property);
         return property.param1 == HDMI_PIXEL_CLOCK_TYPE_NTSC ? 
             tvstate.display.hdmi.frame_rate * (1000.0f/1001.0f) : 
             tvstate.display.hdmi.frame_rate;
@@ -79,6 +81,10 @@ RPI_Create()
 {
     SDL_VideoDevice *device;
     SDL_VideoData *phdata;
+
+    if (!SDL_RPI_LoadSymbols()) {
+        return NULL;
+    }
 
     /* Initialize SDL_VideoDevice structure */
     device = (SDL_VideoDevice *) SDL_calloc(1, sizeof(SDL_VideoDevice));
@@ -161,13 +167,13 @@ AddDispManXDisplay(const int display_id)
     SDL_DisplayMode current_mode;
     SDL_DisplayData *data;
 
-    handle = vc_dispmanx_display_open(display_id);
+    handle = RPI_vc_dispmanx_display_open(display_id);
     if (!handle) {
         return;  /* this display isn't available */
     }
 
-    if (vc_dispmanx_display_get_info(handle, &modeinfo) < 0) {
-        vc_dispmanx_display_close(handle);
+    if (RPI_vc_dispmanx_display_get_info(handle, &modeinfo) < 0) {
+        RPI_vc_dispmanx_display_close(handle);
         return;
     }
 
@@ -188,7 +194,7 @@ AddDispManXDisplay(const int display_id)
     /* Allocate display internal data */
     data = (SDL_DisplayData *) SDL_calloc(1, sizeof(SDL_DisplayData));
     if (data == NULL) {
-        vc_dispmanx_display_close(handle);
+        RPI_vc_dispmanx_display_close(handle);
         return;  /* oh well */
     }
 
@@ -203,7 +209,7 @@ int
 RPI_VideoInit(_THIS)
 {
     /* Initialize BCM Host */
-    bcm_host_init();
+    RPI_bcm_host_init();
 
     AddDispManXDisplay(DISPMANX_ID_MAIN_LCD);  /* your default display */
     AddDispManXDisplay(DISPMANX_ID_FORCE_OTHER);  /* an "other" display...maybe DSI-connected screen while HDMI is your main */
@@ -312,8 +318,8 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
         layer = SDL_atoi(env);
     }
 
-    dispman_update = vc_dispmanx_update_start( 0 );
-    wdata->dispman_window.element = vc_dispmanx_element_add (dispman_update,
+    dispman_update = RPI_vc_dispmanx_update_start( 0 );
+    wdata->dispman_window.element = RPI_vc_dispmanx_element_add (dispman_update,
                                                              displaydata->dispman_display,
                                                              layer /* layer */,
                                                              &dst_rect,
@@ -325,7 +331,7 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
                                                              0 /*transform*/);
     wdata->dispman_window.width = window->w;
     wdata->dispman_window.height = window->h;
-    vc_dispmanx_update_submit_sync(dispman_update);
+    RPI_vc_dispmanx_update_submit_sync(dispman_update);
     
     if (!_this->egl_data) {
         if (SDL_GL_LoadLibrary(NULL) < 0) {
@@ -344,7 +350,7 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
         wdata->vsync_cond = SDL_CreateCond();
         wdata->vsync_cond_mutex = SDL_CreateMutex();
         wdata->double_buffer = SDL_TRUE;
-        vc_dispmanx_vsync_callback(displaydata->dispman_display, RPI_vsync_callback, (void*)wdata);
+        RPI_vc_dispmanx_vsync_callback(displaydata->dispman_display, RPI_vsync_callback, (void*)wdata);
     }
 
     /* Setup driver data for this window */
@@ -372,7 +378,7 @@ RPI_DestroyWindow(_THIS, SDL_Window * window)
             SDL_CondWait(data->vsync_cond, data->vsync_cond_mutex);
             SDL_UnlockMutex(data->vsync_cond_mutex);
 
-            vc_dispmanx_vsync_callback(displaydata->dispman_display, NULL, NULL);
+            RPI_vc_dispmanx_vsync_callback(displaydata->dispman_display, NULL, NULL);
 
             SDL_DestroyCond(data->vsync_cond);
             SDL_DestroyMutex(data->vsync_cond_mutex);

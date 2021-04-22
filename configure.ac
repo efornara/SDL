@@ -1635,49 +1635,20 @@ CheckRPI()
     AC_ARG_ENABLE(video-rpi,
 AS_HELP_STRING([--enable-video-rpi], [use Raspberry Pi video driver [[default=yes]]]),
                   , enable_video_rpi=yes)
-    if test x$enable_video = xyes -a x$enable_video_rpi = xyes; then
-        PKG_CHECK_MODULES([RPI], [bcm_host brcmegl], video_rpi=yes, video_rpi=no)
+    if test x$enable_video = xyes -a x$enable_video_rpi = xyes && \
+       test x$have_loadso = xyes; then
+        AC_CHECK_FILE(/opt/vc/include/bcm_host.h, have_video_rpi=yes, have_video_rpi=no)
+    fi
 
-        if test x$video_rpi = xno; then
-            if test x$ARCH = xnetbsd; then
-                RPI_CFLAGS="-I/usr/pkg/include -I/usr/pkg/include/interface/vcos/pthreads -I/usr/pkg/include/interface/vmcs_host/linux"
-                RPI_LIBS="-Wl,-R/usr/pkg/lib -L/usr/pkg/lib -lbcm_host"
-            else
-                RPI_CFLAGS="-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux"
-                RPI_LIBS="-Wl,-rpath,/opt/vc/lib -L/opt/vc/lib -lbcm_host"
-            fi
-        fi
-
-        # Save the original compiler flags and libraries
-        ac_save_cflags="$CFLAGS"; ac_save_libs="$LIBS"
-
-        # Add the Raspberry Pi compiler flags and libraries
-        CFLAGS="$CFLAGS $RPI_CFLAGS"; LIBS="$LIBS $RPI_LIBS"
-
-        AC_MSG_CHECKING(for Raspberry Pi)
-        have_video_rpi=no
-        AC_TRY_LINK([
-          #include <bcm_host.h>
-        ],[
-          bcm_host_init();
-        ],[
-        have_video_rpi=yes
-        ],[
-        ])
-        AC_MSG_RESULT($have_video_rpi)
-
-        # Restore the compiler flags and libraries
-        CFLAGS="$ac_save_cflags"; LIBS="$ac_save_libs"
-
-        if test x$have_video_rpi = xyes; then
-            CFLAGS="$CFLAGS $RPI_CFLAGS"
-            SDL_CFLAGS="$SDL_CFLAGS $RPI_CFLAGS"
-            EXTRA_CFLAGS="$EXTRA_CFLAGS $RPI_CFLAGS"
-            EXTRA_LDFLAGS="$EXTRA_LDFLAGS $RPI_LIBS"
-            SOURCES="$SOURCES $srcdir/src/video/raspberry/*.c"
-            AC_DEFINE(SDL_VIDEO_DRIVER_RPI, 1, [ ])
-            SUMMARY_video="${SUMMARY_video} rpi"
-        fi
+    if test x$have_video_rpi = xyes; then
+        RPI_CFLAGS="-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux"
+        CFLAGS="$CFLAGS $RPI_CFLAGS"
+        SDL_CFLAGS="$SDL_CFLAGS $RPI_CFLAGS"
+        EXTRA_CFLAGS="$EXTRA_CFLAGS $RPI_CFLAGS"
+        SOURCES="$SOURCES $srcdir/src/video/raspberry/*.c"
+        AC_DEFINE(SDL_VIDEO_DRIVER_RPI, 1, [ ])
+        AC_DEFINE_UNQUOTED(SDL_VIDEO_DRIVER_RPI_DYNAMIC, "libbcm_host.so", [ ])
+        SUMMARY_video="${SUMMARY_video} rpi(dynamic)"
     fi
 }
 

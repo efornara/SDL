@@ -30,6 +30,8 @@
 #include "EGL/egl.h"
 #include "EGL/eglext.h"
 
+#include "SDL_rpidyn.h"
+
 typedef struct SDL_VideoData
 {
     uint32_t egl_refcount;      /* OpenGL ES reference count              */

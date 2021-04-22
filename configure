@@ -670,8 +670,6 @@ X_LIBS
 X_PRE_LIBS
 X_CFLAGS
 XMKMF
-RPI_LIBS
-RPI_CFLAGS
 FUSIONSOUND_LIBS
 FUSIONSOUND_CFLAGS
 ARTSCONFIG
@@ -768,6 +766,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -925,8 +924,6 @@ PULSEAUDIO_CFLAGS
 PULSEAUDIO_LIBS
 FUSIONSOUND_CFLAGS
 FUSIONSOUND_LIBS
-RPI_CFLAGS
-RPI_LIBS
 XMKMF
 DIRECTFB_CFLAGS
 DIRECTFB_LIBS
@@ -978,6 +975,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE}'
@@ -1230,6 +1228,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1367,7 +1374,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1520,6 +1527,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1737,8 +1745,6 @@ Some influential environment variables:
               C compiler flags for FUSIONSOUND, overriding pkg-config
   FUSIONSOUND_LIBS
               linker flags for FUSIONSOUND, overriding pkg-config
-  RPI_CFLAGS  C compiler flags for RPI, overriding pkg-config
-  RPI_LIBS    linker flags for RPI, overriding pkg-config
   XMKMF       Path to xmkmf, Makefile generator for X Window System
   DIRECTFB_CFLAGS
               C compiler flags for DIRECTFB, overriding pkg-config
@@ -19937,135 +19943,46 @@ else
   enable_video_rpi=yes
 fi
 
-    if test x$enable_video = xyes -a x$enable_video_rpi = xyes; then
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for RPI" >&5
-$as_echo_n "checking for RPI... " >&6; }
-
-if test -n "$RPI_CFLAGS"; then
-    pkg_cv_RPI_CFLAGS="$RPI_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"bcm_host brcmegl\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "bcm_host brcmegl") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_RPI_CFLAGS=`$PKG_CONFIG --cflags "bcm_host brcmegl" 2>/dev/null`
+    if test x$enable_video = xyes -a x$enable_video_rpi = xyes && \
+       test x$have_loadso = xyes; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for /opt/vc/include/bcm_host.h" >&5
+$as_echo_n "checking for /opt/vc/include/bcm_host.h... " >&6; }
+if ${ac_cv_file__opt_vc_include_bcm_host_h+:} false; then :
+  $as_echo_n "(cached) " >&6
 else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$RPI_LIBS"; then
-    pkg_cv_RPI_LIBS="$RPI_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"bcm_host brcmegl\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "bcm_host brcmegl") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_RPI_LIBS=`$PKG_CONFIG --libs "bcm_host brcmegl" 2>/dev/null`
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "/opt/vc/include/bcm_host.h"; then
+  ac_cv_file__opt_vc_include_bcm_host_h=yes
 else
-  pkg_failed=yes
+  ac_cv_file__opt_vc_include_bcm_host_h=no
 fi
- else
-    pkg_failed=untried
 fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_file__opt_vc_include_bcm_host_h" >&5
+$as_echo "$ac_cv_file__opt_vc_include_bcm_host_h" >&6; }
+if test "x$ac_cv_file__opt_vc_include_bcm_host_h" = xyes; then :
+  have_video_rpi=yes
 else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        RPI_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "bcm_host brcmegl" 2>&1`
-        else
-	        RPI_PKG_ERRORS=`$PKG_CONFIG --print-errors "bcm_host brcmegl" 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$RPI_PKG_ERRORS" >&5
-
-	video_rpi=no
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	video_rpi=no
-else
-	RPI_CFLAGS=$pkg_cv_RPI_CFLAGS
-	RPI_LIBS=$pkg_cv_RPI_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-	video_rpi=yes
+  have_video_rpi=no
 fi
 
-        if test x$video_rpi = xno; then
-            if test x$ARCH = xnetbsd; then
-                RPI_CFLAGS="-I/usr/pkg/include -I/usr/pkg/include/interface/vcos/pthreads -I/usr/pkg/include/interface/vmcs_host/linux"
-                RPI_LIBS="-Wl,-R/usr/pkg/lib -L/usr/pkg/lib -lbcm_host"
-            else
-                RPI_CFLAGS="-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux"
-                RPI_LIBS="-Wl,-rpath,/opt/vc/lib -L/opt/vc/lib -lbcm_host"
-            fi
-        fi
+    fi
 
-        # Save the original compiler flags and libraries
-        ac_save_cflags="$CFLAGS"; ac_save_libs="$LIBS"
-
-        # Add the Raspberry Pi compiler flags and libraries
-        CFLAGS="$CFLAGS $RPI_CFLAGS"; LIBS="$LIBS $RPI_LIBS"
-
-        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Raspberry Pi" >&5
-$as_echo_n "checking for Raspberry Pi... " >&6; }
-        have_video_rpi=no
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-          #include <bcm_host.h>
-
-int
-main ()
-{
-
-          bcm_host_init();
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-
-        have_video_rpi=yes
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $have_video_rpi" >&5
-$as_echo "$have_video_rpi" >&6; }
-
-        # Restore the compiler flags and libraries
-        CFLAGS="$ac_save_cflags"; LIBS="$ac_save_libs"
-
-        if test x$have_video_rpi = xyes; then
-            CFLAGS="$CFLAGS $RPI_CFLAGS"
-            SDL_CFLAGS="$SDL_CFLAGS $RPI_CFLAGS"
-            EXTRA_CFLAGS="$EXTRA_CFLAGS $RPI_CFLAGS"
-            EXTRA_LDFLAGS="$EXTRA_LDFLAGS $RPI_LIBS"
-            SOURCES="$SOURCES $srcdir/src/video/raspberry/*.c"
+    if test x$have_video_rpi = xyes; then
+        RPI_CFLAGS="-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux"
+        CFLAGS="$CFLAGS $RPI_CFLAGS"
+        SDL_CFLAGS="$SDL_CFLAGS $RPI_CFLAGS"
+        EXTRA_CFLAGS="$EXTRA_CFLAGS $RPI_CFLAGS"
+        SOURCES="$SOURCES $srcdir/src/video/raspberry/*.c"
 
 $as_echo "#define SDL_VIDEO_DRIVER_RPI 1" >>confdefs.h
 
-            SUMMARY_video="${SUMMARY_video} rpi"
-        fi
+
+cat >>confdefs.h <<_ACEOF
+#define SDL_VIDEO_DRIVER_RPI_DYNAMIC "libbcm_host.so"
+_ACEOF
+
+        SUMMARY_video="${SUMMARY_video} rpi(dynamic)"
     fi
 }
 
@@ -20177,8 +20094,6 @@ ac_x_header_dirs='
 /usr/local/include/X11R6
 /usr/local/include/X11R5
 /usr/local/include/X11R4
-
-/opt/X11/include
 
 /usr/X386/include
 /usr/x386/include
