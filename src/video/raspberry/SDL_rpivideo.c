@@ -298,8 +298,6 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
     window->flags |= SDL_WINDOW_OPENGL;
 
     /* Create a dispman element and associate a window to it */
-    dst_rect.x = 0;
-    dst_rect.y = 0;
     if (window_aspect >= display_aspect) {
         dst_rect.width = display->desktop_mode.w;
         dst_rect.height = display->desktop_mode.w / window_aspect;
@@ -307,6 +305,9 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
         dst_rect.width = display->desktop_mode.h * window_aspect;
         dst_rect.height = display->desktop_mode.h;
     }
+    /* Center the dispman element */
+    dst_rect.x = (display->desktop_mode.w - dst_rect.width) / 2;
+    dst_rect.y = (display->desktop_mode.h - dst_rect.height) / 2;
 
     src_rect.x = 0;
     src_rect.y = 0;
