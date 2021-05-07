@@ -32,9 +32,31 @@
 
 #include "SDL_rpidyn.h"
 
+#define RPI_GRAVITY_LEFT    0x00000001u
+#define RPI_GRAVITY_RIGHT   0x00000002u
+#define RPI_GRAVITY_HCENTER 0x00000004u
+#define RPI_GRAVITY_H_MASK  0x0000000fu
+
+#define RPI_GRAVITY_TOP     0x00000010u
+#define RPI_GRAVITY_BOTTOM  0x00000020u
+#define RPI_GRAVITY_VCENTER 0x00000040u
+#define RPI_GRAVITY_V_MASK  0x000000f0u
+
+typedef enum RPI_Scale {
+   RPI_NATIVE,
+   RPI_LETTERBOX,
+   RPI_NO
+} RPI_scale;
+
 typedef struct SDL_VideoData
 {
     uint32_t egl_refcount;      /* OpenGL ES reference count              */
+
+    /* RPI options */
+    unsigned int gravity;
+    RPI_scale scale;
+    int background;
+
 } SDL_VideoData;
 
 

@@ -76,6 +76,81 @@ RPI_GetRefreshRate()
     return 60;  /* Failed to get display state, default to 60 */
 }
 
+/* TODO: follow SDL coding convention (naming, braces, etc...) */
+
+static struct GravityEntry {
+    const char *label;
+    unsigned int gravity;
+} gravity_map[] = {
+    { "topleft", RPI_GRAVITY_TOP | RPI_GRAVITY_LEFT },
+    { "topright", RPI_GRAVITY_TOP | RPI_GRAVITY_RIGHT },
+    { "bottomleft", RPI_GRAVITY_BOTTOM | RPI_GRAVITY_LEFT },
+    { "bottomright", RPI_GRAVITY_BOTTOM | RPI_GRAVITY_RIGHT },
+    { "top", RPI_GRAVITY_TOP | RPI_GRAVITY_HCENTER },
+    { "bottom", RPI_GRAVITY_BOTTOM | RPI_GRAVITY_HCENTER },
+    { "left", RPI_GRAVITY_VCENTER | RPI_GRAVITY_LEFT },
+    { "right", RPI_GRAVITY_VCENTER | RPI_GRAVITY_RIGHT },
+    { "center", RPI_GRAVITY_VCENTER | RPI_GRAVITY_HCENTER }
+};
+
+static void parse_gravity(SDL_VideoData *videodata, const char *value) {
+    unsigned int i;
+
+    for (i = 0; i < sizeof(gravity_map) / sizeof(struct GravityEntry); i++) {
+        if (SDL_strcmp(value, gravity_map[i].label) == 0) {
+            videodata->gravity = gravity_map[i].gravity;
+            return;
+        }
+    }
+}
+
+static void parse_scale(SDL_VideoData *videodata, const char *value) {
+    if (SDL_strcmp(value, "native") == 0)
+        videodata->scale = RPI_NATIVE;
+    else if (SDL_strcmp(value, "letterbox") == 0)
+        videodata->scale = RPI_LETTERBOX;
+    else if (SDL_strcmp(value, "no") == 0)
+        videodata->scale = RPI_NO;
+}
+
+static void parse_background(SDL_VideoData *videodata, const char *value) {
+    if (SDL_strcmp(value, "0") == 0)
+        videodata->background = 0;
+    else if (SDL_strcmp(value, "1") == 0)
+        videodata->background = 1;
+}
+
+static void parse_option(SDL_VideoData *videodata, char *option) {
+    char *state, *key, *value;
+
+    if (option == NULL)
+        return;
+    if ((key = SDL_strtokr(option, "=", &state)) == NULL)
+        return;
+    if ((value = SDL_strtokr(NULL, "=", &state)) == NULL)
+        return;
+    if (SDL_strcmp(key, "gravity") == 0)
+        parse_gravity(videodata, value);
+    else if (SDL_strcmp(key, "scale") == 0)
+        parse_scale(videodata, value);
+    else if (SDL_strcmp(key, "background") == 0)
+        parse_background(videodata, value);
+}
+
+static void parse_env(SDL_VideoData *videodata) {
+    char *env, *s, *state, *option;
+
+    env = SDL_getenv("SDL_VIDEO_RPI_OPTIONS");
+    if (env == NULL)
+        return;
+    s = SDL_strdup(env);
+    option = SDL_strtokr(s, ",", &state);
+    parse_option(videodata, option);
+    while ((option = SDL_strtokr(NULL, ",", &state)) != NULL)
+        parse_option(videodata, option);
+    SDL_free(s);
+}
+
 static SDL_VideoDevice *
 RPI_Create()
 {
@@ -100,6 +175,11 @@ RPI_Create()
         SDL_free(device);
         return NULL;
     }
+
+    phdata->gravity = RPI_GRAVITY_HCENTER | RPI_GRAVITY_VCENTER;
+    phdata->scale = RPI_NATIVE;
+    phdata->background = 0;
+    parse_env(phdata);
 
     device->driverdata = phdata;
 
@@ -259,6 +339,7 @@ RPI_vsync_callback(DISPMANX_UPDATE_HANDLE_T u, void *data)
 int
 RPI_CreateWindow(_THIS, SDL_Window * window)
 {
+    SDL_VideoData *videodata;
     SDL_WindowData *wdata;
     SDL_VideoDisplay *display;
     SDL_DisplayData *displaydata;
@@ -270,6 +351,8 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
     const char *env;
     float display_aspect;
     float window_aspect;
+
+    videodata = (SDL_VideoData *)SDL_GetVideoDevice()->driverdata;
 
     /* Disable alpha, otherwise the app looks composed with whatever dispman is showing (X11, console,etc) */
     dispman_alpha.flags = DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS; 
@@ -284,11 +367,11 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
     display = SDL_GetDisplayForWindow(window);
     displaydata = (SDL_DisplayData *) display->driverdata;
 
-    /* Basic scaler support - TODO: mouse, env options, background layer */
-    if (!window->w) {
+    /* Basic scaler support - TODO: mouse, background layer */
+    if (!window->w || videodata->scale == RPI_NATIVE) {
         window->w = display->desktop_mode.w;
     }
-    if (!window->h) {
+    if (!window->h || videodata->scale == RPI_NATIVE) {
         window->h = display->desktop_mode.h;
     }
     display_aspect = (float)display->desktop_mode.w / display->desktop_mode.h;
@@ -298,16 +381,42 @@ RPI_CreateWindow(_THIS, SDL_Window * window)
     window->flags |= SDL_WINDOW_OPENGL;
 
     /* Create a dispman element and associate a window to it */
-    if (window_aspect >= display_aspect) {
-        dst_rect.width = display->desktop_mode.w;
-        dst_rect.height = display->desktop_mode.w / window_aspect;
+    if (videodata->scale == RPI_LETTERBOX) {
+        if (window_aspect >= display_aspect) {
+            dst_rect.width = display->desktop_mode.w;
+            dst_rect.height = display->desktop_mode.w / window_aspect;
+        } else {
+            dst_rect.width = display->desktop_mode.h * window_aspect;
+            dst_rect.height = display->desktop_mode.h;
+        }
     } else {
-        dst_rect.width = display->desktop_mode.h * window_aspect;
-        dst_rect.height = display->desktop_mode.h;
+        dst_rect.width = window->w;
+        dst_rect.height = window->h;
     }
-    /* Center the dispman element */
-    dst_rect.x = (display->desktop_mode.w - dst_rect.width) / 2;
-    dst_rect.y = (display->desktop_mode.h - dst_rect.height) / 2;
+
+    /* Position the dispman element */
+    switch (videodata->gravity & RPI_GRAVITY_H_MASK) {
+    case RPI_GRAVITY_LEFT:
+        dst_rect.x = 0;
+        break;
+    case RPI_GRAVITY_RIGHT:
+        dst_rect.x = display->desktop_mode.w - dst_rect.width;
+        break;
+    default: /* RPI_GRAVITY_HCENTER */
+        dst_rect.x = (display->desktop_mode.w - dst_rect.width) / 2;
+        break;
+    }
+    switch (videodata->gravity & RPI_GRAVITY_V_MASK) {
+    case RPI_GRAVITY_TOP:
+        dst_rect.y = 0;
+        break;
+    case RPI_GRAVITY_BOTTOM:
+        dst_rect.y = display->desktop_mode.h - dst_rect.height;
+        break;
+    default: /* RPI_GRAVITY_VCENTER */
+        dst_rect.y = (display->desktop_mode.h - dst_rect.height) / 2;
+        break;
+    }
 
     src_rect.x = 0;
     src_rect.y = 0;
